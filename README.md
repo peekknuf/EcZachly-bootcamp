@@ -49,3 +49,68 @@
 2. Provide inline examples or documentation illustrating incremental approaches, aiding clarity for reviewers.
 3. Clarify data type choices in the documentation to help others understand design decisions.
 
+
+## Spark and Iceberg Implementation
+
+### Key Accomplishments
+- Successfully implemented advanced PySpark configurations and operations to meet task requirements.
+- Demonstrated a solid understanding of join strategies, bucketing, aggregation, and data size optimization.
+- Integrated modern table formats (Iceberg) to enhance distributed processing efficiency.
+
+### Highlights
+- **Disabling Broadcast Joins**:
+  Correctly set `spark.sql.autoBroadcastJoinThreshold = "-1"` to disable automatic broadcast joins.
+- **Explicit Broadcast Join**:
+  Properly used the `broadcast` function for the maps and medals tables, ensuring explicit control over join behavior.
+- **Bucket Joins**:
+  Applied bucketing with 16 buckets on `match_id` for `matches`, `match_details`, and `medals_matches_players`.
+- **Aggregation Queries**:
+  - **4a (Highest Average Kills per Game)**: Used `avg` and `orderBy` for accurate aggregation.
+  - **4b (Playlist with Most Plays)**: Implemented `groupBy` and `count` effectively.
+  - **4c (Most Played Map)**: Correctly identified the map with the highest plays using `groupBy` and `count`.
+  - **4d (Highest Killing Spree Medals on Map)**: Combined joins and filtering to determine the map with the highest "Killing Spree" medals.
+- **Data Size Optimization**:
+  - Used `.sortWithinPartitions` and partitioned results by `map_id`, showcasing understanding of partitioning and sorting.
+
+### Suggestions
+1. Experiment with different partitioning strategies and sort orders on Iceberg to optimize data size and query performance further.
+2. Include more detailed comments or examples explaining the rationale behind specific partitioning and sorting choices.
+3. Explore alternative approaches to sorting within partitions to enhance query patterns, especially for high-cardinality fields.
+
+
+## SparkSQL and PySpark Job Implementation Feedback
+
+### Key Accomplishments
+- Successfully converted Postgres SCD transformation logic to SparkSQL with efficient use of window functions and partitioning.
+- Developed well-structured PySpark jobs for backfill and cumulative data transformations, integrating SQL logic seamlessly.
+- Demonstrated robust testing practices with thorough validations using `chispa` and SQL assertions.
+
+### Highlights
+- **Backfill Query Conversion**:
+  - Correctly translated SCD logic for `actors_history_scd` into SparkSQL.
+  - Effective use of window functions like `LAG` and partitioned `SUM` for generating streak identifiers.
+- **PySpark Jobs**:
+  - **Actors Backfill Job** (`actors_backfill_job.py`):
+    - Integrated SparkSQL transformations into PySpark effectively.
+    - Accurately implemented window functions for detecting changes.
+    - Demonstrated clear code readability and logical organization.
+  - **Hosts Cumulated Job** (`hosts_cumulated_job.py`):
+    - Utilized CTEs, `FULL OUTER JOIN`, and `map_concat` to handle deduplication and cumulative activity aggregation.
+    - Strong SparkSQL integration for managing complex transformations.
+- **Tests**:
+  - **Actors Backfill Test** (`test_actors_backfill.py`):
+    - Validated transformation logic using `chispa.dataframe_comparer`.
+    - Clear schema definitions for input and expected output enhance test accuracy.
+  - **Hosts Cumulated Test** (`test_hosts_cumulated.py`):
+    - Verified cumulative logic with example data and temporary views.
+    - Effective use of SQL assertions ensures consistency.
+
+### Suggestions
+1. Add more inline comments to explain complex SQL queries for better maintainability.
+2. Incorporate dynamic date handling in SQL scripts to enhance flexibility and reduce hardcoding.
+3. Explore further optimization opportunities in SparkSQL transformations for large datasets.
+
+### General Observations
+- **Best Practices**: Demonstrated strong understanding of PySpark and SparkSQL, including SQL expressions, window functions, and cumulative data handling.
+- **Code Structure**: Organized, readable codebase with clear variable names and modular SQL logic.
+- **Comprehensive Testing**: Thorough test coverage ensures accurate data processing and transformation logic.
