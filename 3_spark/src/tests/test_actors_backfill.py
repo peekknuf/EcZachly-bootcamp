@@ -2,6 +2,8 @@ from chispa.dataframe_comparer import assert_df_equality
 from pyspark.sql import Row
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType
 
+from ..jobs.actors_backfill_job import do_actors_backfill_transformation
+
 def test_actor_streaks(spark):
     input_data = [
         Row(actor="Al Pacino", quality_class="Good", current_year=2001, is_active=True),
@@ -31,6 +33,8 @@ def test_actor_streaks(spark):
         Row(actor="Robert De Niro", quality_class="Bad", is_active=False, first_year=2006, end_year=2006, current_year=2021),
     ]
 
+    actual_df = do_actors_backfill_transformation(spark, input_df)
+
     expected_schema = StructType([
         StructField("actor", StringType(), True),
         StructField("quality_class", StringType(), True),
@@ -41,3 +45,5 @@ def test_actor_streaks(spark):
     ])
 
     expected_df = spark.createDataFrame(expected_data, schema=expected_schema)
+
+    assert_df_equality(actual_df, expected_df, ignore_nullable=True)
