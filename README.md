@@ -114,3 +114,43 @@
 - **Best Practices**: Demonstrated strong understanding of PySpark and SparkSQL, including SQL expressions, window functions, and cumulative data handling.
 - **Code Structure**: Organized, readable codebase with clear variable names and modular SQL logic.
 - **Comprehensive Testing**: Thorough test coverage ensures accurate data processing and transformation logic.
+
+
+# Flink Sessionization Job
+
+## Overview
+This Flink job processes web traffic data to sessionize events by IP address and host, using a 5-minute session gap. The job integrates Kafka as the data source and writes sessionized data and metrics to Postgres sinks. Additionally, it computes the average number of web events per session for each host, enabling host-specific insights.
+
+## Key Features
+
+- **Sessionization Logic:**
+  - Implements session windows with a 5-minute gap using Flink's `Session` API.
+  - Captures session start and end times, IP address, host, and event counts.
+
+- **Kafka Integration:**
+  - Configures Kafka as the source with proper watermarking for event-time processing.
+  - Handles out-of-order events efficiently using watermarks.
+
+- **Postgres Sink:**
+  - Writes sessionized data to a `session_events_sink` table.
+  - Aggregates metrics for average events per session and writes to a `session_metrics_sink` table.
+
+- **Scalability and Reliability:**
+  - Enables checkpointing for fault tolerance.
+  - Configurable parallelism for efficient resource utilization.
+
+## Data Flow
+
+1. **Source:** Kafka topic containing web traffic data in JSON format.
+2. **Transformations:**
+   - Sessionize events using a 5-minute gap.
+   - Compute metrics for average events per session by host.
+3. **Sink:** Write sessionized data and metrics to Postgres tables.
+
+## Suggestions for Future Improvements
+
+1. Add more inline comments to improve code maintainability and explain complex transformations.
+2. Use dynamic parameterization for session gap time and other configurations.
+3. Optimize sessionization logic for larger datasets using partition pruning and stateful processing.
+4. Enhance metrics by including session duration, unique URLs per session, or geodata-based insights.
+5. Implement retry logic and enhanced logging for better error monitoring and handling.
