@@ -1,12 +1,28 @@
 import os
-
+import logging
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 from pyflink.table.expressions import lit, col
 from pyflink.table.window import Session
 
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 def create_session_sink_table(t_env):
+    """
+    Create a sink table for storing session-level aggregates of events.
+
+    The table has the following columns:
+    - session_start: the start time of the session
+    - session_end: the end time of the session
+    - ip: the client IP address
+    - host: the host that the client visited
+    - event_count: the number of events in the session
+
+    The PRIMARY KEY is (session_start, ip, host) and is not enforced.
+    """
     table_name = "session_events_sink"
     sink_ddl = f"""
         CREATE TABLE {table_name} (
@@ -30,6 +46,24 @@ def create_session_sink_table(t_env):
 
 
 def create_session_metrics_sink(t_env):
+    """
+    Create a sink table for storing metrics of sessions.
+
+    This table records the average number of events per session for each host.
+    It has the following columns:
+    - host: the host name
+    - avg_events_per_session: the average number of events per session
+
+    The PRIMARY KEY is host and is not enforced.
+
+    The table is created using JDBC connector and connects to a PostgreSQL database.
+    The connection details are fetched from environment variables:
+    - POSTGRES_URL: the database URL
+    - POSTGRES_USER: the database username (default is 'postgres')
+    - POSTGRES_PASSWORD: the database password (default is 'postgres')
+
+    Returns the name of the created table.
+    """
     table_name = "session_metrics_sink"
     # Funny thing that Flink REQUIRES the PK for Session to work BUT CANT ENFORCE IT IN ANY WAY
     sink_ddl = f"""
@@ -51,6 +85,29 @@ def create_session_metrics_sink(t_env):
 
 
 def create_processed_events_source_kafka(t_env):
+    """
+    Create a source table for processed events from Kafka.
+
+    This table is created using the Kafka connector and connects to a Kafka topic.
+    The connection details are fetched from environment variables:
+    - KAFKA_URL: the Kafka bootstrap servers
+    - KAFKA_TOPIC: the Kafka topic
+    - KAFKA_GROUP: the Kafka group.id
+    - KAFKA_WEB_TRAFFIC_KEY and KAFKA_WEB_TRAFFIC_SECRET: the Kafka credentials
+
+    The table has the following columns:
+    - ip: the IP address
+    - event_time: the event timestamp
+    - referrer: the referrer URL
+    - host: the host name
+    - url: the URL
+    - geodata: the geolocation data
+    - window_timestamp: the event timestamp converted to a timestamp with a watermark
+
+    The watermark is set to 15 seconds behind the current event timestamp.
+
+    Returns the name of the created table.
+    """
     kafka_key = os.environ.get("KAFKA_WEB_TRAFFIC_KEY", "")
     kafka_secret = os.environ.get("KAFKA_WEB_TRAFFIC_SECRET", "")
     table_name = "process_events_kafka"
@@ -115,6 +172,7 @@ def log_aggregation():
             session_table
         )
         # Pretty much the same as above but more nuanced and rather gnarly.
+        # The average number of events per session for each host
         # www.techcreator.io is by far the most popular host
         t_env.from_path(source_table).window(
             Session.with_gap(lit(5).minutes)
@@ -135,7 +193,7 @@ def log_aggregation():
         )
     # Oh how many times have I seen this while working on this thing
     except Exception as e:
-        print("Writing records from Kafka to JDBC failed:", str(e))
+        logger.error(f"An error occurred: {str(e)}", exc_info=True)
 
 
 if __name__ == "__main__":
