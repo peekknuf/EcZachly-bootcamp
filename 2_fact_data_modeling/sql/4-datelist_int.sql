@@ -1,27 +1,37 @@
-
-with cte_devices as (
-		select * from user_devices_cumulated where date = '2023-01-31'
+-- Insert into the `datelist_int` table
+WITH cte_devices AS (
+    -- Fetch cumulative device activity data for the specific date '2023-01-31'
+    SELECT * FROM user_devices_cumulated
+    WHERE date = '2023-01-31'
 ),
-cte_series as ( 
-		select cast(generate_series(date('2022-12-31'), date('2023-01-31'), interval '1 day') as date) as series_date
+cte_series AS (
+    -- Generate a series of dates from '2022-12-31' to '2023-01-31' with a 1-day interval
+    SELECT CAST(generate_series(DATE('2022-12-31'), DATE('2023-01-31'), INTERVAL '1 day') AS DATE) AS series_date
 ),
-cte_crossjoined as ( 
-		select  d.device_activity_datelist @> array[s.series_date] as is_active,
-            (date '2023-01-31' - s.series_date) as days_since,
-            device_id
-		from cte_devices d 
-			cross join cte_series s 
+cte_crossjoined AS (
+    -- Cross join the device data with the generated date series
+    -- Check if each date in the series is present in the device's activity datelist
+    SELECT
+        d.device_activity_datelist @> ARRAY[s.series_date] AS is_active,  -- Check if the date is in the datelist
+        (DATE '2023-01-31' - s.series_date) AS days_since,  -- Calculate the number of days since the series date
+        device_id
+    FROM cte_devices d
+    CROSS JOIN cte_series s
 ),
-cte_bits as ( 
-		select device_id,
-		sum(case
-			when is_active then pow(2,32 - days_since)
-			else 0
-		end)::bigint::bit(32) as datelist_int
-		from cte_crossjoined
-		group by device_id
-		)
+cte_bits AS (
+    -- Convert the active dates into a 32-bit integer representation
+    SELECT
+        device_id,
+        SUM(
+            CASE
+                WHEN is_active THEN POW(2, 32 - days_since)  -- Set the bit if the date is active
+                ELSE 0  -- Leave the bit unset if the date is inactive
+            END
+        )::BIGINT::BIT(32) AS datelist_int  -- Convert the sum to a 32-bit integer
+    FROM cte_crossjoined
+    GROUP BY device_id
+)
 
-insert into datelist_int
-select * from cte_bits
-
+-- Insert the final result into the `datelist_int` table
+INSERT INTO datelist_int
+SELECT * FROM cte_bits;
